@@ -3,7 +3,7 @@ import {useContext,useEffect} from 'react'
 import Routing from './Router.jsx'
 import {DataContext} from './Components/DataProvider/DataProvider'
 import {Type} from './Utility/action.type'
-import {auth} from './Utility/firebase.js'
+import {auth} from './Utility/Firebase'
 
 
 function App() {
