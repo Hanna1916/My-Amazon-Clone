@@ -8,7 +8,7 @@ import classes from "./Header.module.css";
 import {Link} from 'react-router-dom'
 import LowerHeader from "./LowerHeader";
 import { DataContext } from "../DataProvider/DataProvider";
-import {auth} from '../../Utility/firebase'
+import {auth} from '../../Utility/Firebase'
 
 
 function Header() {
