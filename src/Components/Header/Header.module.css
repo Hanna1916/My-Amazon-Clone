@@ -1,0 +1,249 @@
+* {
+    /* box-sizing: border-box; */
+    margin: 0;
+    padding: 0;
+} 
+.fixed {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+  .header__container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #131921;
+  color: white;
+  padding: 10px 20px;
+}
+
+/* Logo + Delivery */
+.logo_container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logo_container img {
+  width: 100px;
+  object-fit: contain;
+}
+
+.delivery {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.delivery p {
+  font-size: 12px;
+  margin: 0;
+  color: #ccc;
+}
+
+.delivery span {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Search Bar */
+.search {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  margin: 0 20px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: white;
+}
+
+.search select {
+  padding: 8px;
+  border: none;
+  background: #f3f3f3;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.search input {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.search svg {
+  background: #febd69;
+  padding: 8px;
+  cursor: pointer;
+}
+
+/* Orders + Account + Cart */
+.order_container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-size: 14px;
+  max-width: 450px;
+}
+
+.order_container a {
+  text-decoration: none;
+  color: white;
+}
+.order_container a:hover {
+  text-decoration: underline;
+}
+.order_container  {
+  font-size: 10px;
+}
+
+.language {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.language img {
+  width: 25px;
+  height: 20px;
+  object-fit: cover;
+}
+
+.language select {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cart {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+
+.cart span {
+  position: absolute;
+  top: -5px;
+  right: -10px;
+  background: #f08804;
+  color: black;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 50%;
+  font-size: 12px;
+}
+.search svg:hover {
+  background: #d49644;
+       
+}
+.search:focus-within {
+  border: 2px solid rgb(235, 161, 173);
+    }
+
+.order_container a:hover, .delivery:hover, .logo_container a:hover, .lower_container ul li:hover {
+  border: 1px solid white;
+  border-radius: 3px;
+        
+}
+.lower_container {
+  background-color: #232f3e;
+  color: white;
+
+}
+
+.lower_container ul {
+  display: flex;
+  list-style: none;
+  gap: 5px;
+}
+
+
+
+/* Lower Header Container */
+.lower__container {
+  background-color: #232f3e; /* Amazon dark blue */
+  color: white;
+  padding: 10px 20px;
+}
+
+.lower__container ul {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Each nav item */
+.lower__container li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.lower__container li:hover {
+  background-color: #37475a; /* Amazon hover */
+}
+
+/* "All" menu icon */
+.lower__container li:first-child {
+  font-weight: bold;
+}
+.lower__container li:first-child svg {
+  font-size: 20px;
+}
+
+@media screen and (max-width: 768px) {
+  /* Stack header items on smaller screens */
+  .header__container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .search {
+    width: 100%;
+    margin: 10px 0;
+  }
+
+  .order_container {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .logo_container {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Lower header scrollable on small screens */
+  .lower__container ul {
+    gap: 15px;
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  /* Hide less important text on very small screens */
+  .delivery,
+  .language select,
+  .order_container p,
+  .order_container span {
+    display: none;
+  }
+}
