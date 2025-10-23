@@ -1,5 +1,6 @@
+
 import React, { createContext, useReducer, useEffect } from "react";
-import { auth } from "../../Utility/firebase"; // Adjust path as needed
+import { auth } from "../../Utility/Firebase"; // Adjust path as needed
 import { onAuthStateChanged } from "firebase/auth";
 import { Type } from "../../Utility/action.type"; // You'll need this file
 
