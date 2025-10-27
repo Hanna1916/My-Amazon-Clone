@@ -40,98 +40,124 @@ function Payment() {
   const handleChange = (e) => {
     e?.error?.message ? setCardError(e?.error?.message) : setCardError("");
   };
-  const handlePayment = async (e) => {
-    e.preventDefault();
+const handlePayment = async (e) => {
+  e.preventDefault();
 
-    if (!stripe || !elements) {
-      setCardError("Stripe not loaded yet");
-      return;
-    }
+  if (!stripe || !elements) {
+    setCardError("Stripe not loaded yet");
+    return;
+  }
 
-    if (!basket || basket.length === 0) {
-      setCardError("Your basket is empty");
-      return;
-    }
+  if (!basket || basket.length === 0) {
+    setCardError("Your basket is empty");
+    return;
+  }
 
-    if (!user || !user.uid) {
-      setCardError("Please sign in to complete payment");
-      return;
-    }
+  if (!user || !user.uid) {
+    setCardError("Please sign in to complete payment");
+    return;
+  }
 
-    setProcessing(true);
-    setCardError(null);
+  setProcessing(true);
+  setCardError(null);
 
-    try {
-      console.log("💳 Using MOCK payment (backend returning 'hello world')");
+  try {
+    console.log("💳 Starting payment process...");
 
-      // ✅ MOCK PAYMENT - Backend is not returning proper JSON
-      const mockPayment = {
-        paymentIntentId: `pi_mock_${Date.now()}`,
-        clientSecret: `cs_mock_${Date.now()}`,
-        amount: total * 100,
-        status: "succeeded",
-        mock: true,
-      };
+    // ✅ FIXED: Use direct fetch instead of axiosInstance
+    const BACKEND_URL = 'https://amazon-clone-backend.onrender.com';
+    
+    console.log("🔄 Calling backend:", `${BACKEND_URL}/api/create-payment-intent`);
 
-      console.log("✅ Mock payment created:", mockPayment);
-
-      // Create order data
-      const orderData = {
-        id: mockPayment.paymentIntentId,
-        basket: basket,
-        items: basket.map((item) => ({
-          id: item.id,
-          title: item.title,
-          price: item.price,
-          amount: item.amount,
-          image: item.image,
-        })),
-        amount: total * 100,
-        total: total,
-        created: serverTimestamp(),
-        status: "paid",
+    // Create payment intent
+    const paymentResponse = await fetch(`${BACKEND_URL}/api/create-payment-intent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: total * 100, // Convert to cents
         userId: user.uid,
         email: user.email,
-        stripe_payment_intent: mockPayment.paymentIntentId,
-        payment_method: "mock_development",
-        shipping_address: {
-          email: user.email,
-          address: "123 React Lane",
-          city: "Frederick",
-          state: "MD",
-          zip: "21701",
-        },
-      };
+      }),
+    });
 
-      console.log("📦 Saving order to Firestore...");
+    const paymentData = await paymentResponse.json();
 
-      // Save to Firestore
-      await setDoc(
-        doc(db, "users", user.uid, "orders", mockPayment.paymentIntentId),
-        orderData
-      );
-
-      console.log("✅ Order saved to Firestore");
-
-      // Clear basket and show success
-      dispatch({ type: Type.EMPTY_BASKET });
-      setSuccess(true);
-
-      setTimeout(() => {
-        navigate("/orders", {
-          state: {
-            msg: "🎉 Order placed successfully! (Development Mode)",
-            orderId: mockPayment.paymentIntentId,
-          },
-        });
-      }, 1500);
-    } catch (error) {
-      console.error("❌ Payment error:", error);
-      setCardError("Payment failed: " + error.message);
-    } finally {
-      setProcessing(false);
+    if (!paymentResponse.ok) {
+      throw new Error(paymentData.error || "Payment failed");
     }
-  };
+
+    console.log("✅ Payment intent created:", paymentData);
+
+    // Create order data
+    const orderData = {
+      id: paymentData.paymentIntentId,
+      basket: basket,
+      items: basket.map((item) => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        amount: item.amount,
+        image: item.image,
+      })),
+      amount: total * 100,
+      total: total,
+      created: serverTimestamp(),
+      status: "paid",
+      userId: user.uid,
+      email: user.email,
+      stripe_payment_intent: paymentData.paymentIntentId,
+      backend: "render",
+      shipping_address: {
+        email: user.email,
+        address: "123 React Lane",
+        city: "Frederick",
+        state: "MD",
+        zip: "21701",
+      },
+    };
+
+    // Save to Firestore
+    await setDoc(
+      doc(db, "users", user.uid, "orders", paymentData.paymentIntentId),
+      orderData
+    );
+
+    console.log("✅ Order saved to Firestore");
+
+    // ✅ FIXED: Confirm order with direct fetch
+    await fetch(`${BACKEND_URL}/api/confirm-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        orderId: paymentData.paymentIntentId,
+        paymentIntentId: paymentData.paymentIntentId,
+        amount: total * 100,
+      }),
+    });
+
+    // Clear basket and show success
+    dispatch({ type: Type.EMPTY_BASKET });
+    setSuccess(true);
+
+    setTimeout(() => {
+      navigate("/orders", {
+        state: {
+          msg: "🎉 Order placed successfully!",
+          orderId: paymentData.paymentIntentId,
+        },
+      });
+    }, 1500);
+  } catch (error) {
+    console.error("❌ Payment error:", error);
+    setCardError("Payment failed: " + error.message);
+  } finally {
+    setProcessing(false);
+  }
+};
 
   // ✅ Early return if no basket
   if (!basket || basket.length === 0) {

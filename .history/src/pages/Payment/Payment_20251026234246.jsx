@@ -62,9 +62,9 @@ function Payment() {
     setCardError(null);
 
     try {
-      console.log("💳 Using MOCK payment (backend returning 'hello world')");
+      console.log("💳 Using MOCK payment (backend unavailable)");
 
-      // ✅ MOCK PAYMENT - Backend is not returning proper JSON
+      // ✅ MOCK PAYMENT - No backend required
       const mockPayment = {
         paymentIntentId: `pi_mock_${Date.now()}`,
         clientSecret: `cs_mock_${Date.now()}`,
@@ -120,7 +120,7 @@ function Payment() {
       setTimeout(() => {
         navigate("/orders", {
           state: {
-            msg: "🎉 Order placed successfully! (Development Mode)",
+            msg: "🎉 Order placed successfully! (Mock Payment)",
             orderId: mockPayment.paymentIntentId,
           },
         });

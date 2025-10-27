@@ -62,22 +62,43 @@ function Payment() {
     setCardError(null);
 
     try {
-      console.log("💳 Using MOCK payment (backend returning 'hello world')");
+      console.log("💳 Starting payment process...");
 
-      // ✅ MOCK PAYMENT - Backend is not returning proper JSON
-      const mockPayment = {
-        paymentIntentId: `pi_mock_${Date.now()}`,
-        clientSecret: `cs_mock_${Date.now()}`,
-        amount: total * 100,
-        status: "succeeded",
-        mock: true,
-      };
+      // ✅ FIXED: Use direct fetch instead of axiosInstance
+      const BACKEND_URL = "https://amazon-clone-backend.onrender.com";
 
-      console.log("✅ Mock payment created:", mockPayment);
+      console.log(
+        "🔄 Calling backend:",
+        `${BACKEND_URL}/api/create-payment-intent`
+      );
+
+      // Create payment intent
+      const paymentResponse = await fetch(
+        `${BACKEND_URL}/api/create-payment-intent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: total * 100, // Convert to cents
+            userId: user.uid,
+            email: user.email,
+          }),
+        }
+      );
+
+      const paymentData = await paymentResponse.json();
+
+      if (!paymentResponse.ok) {
+        throw new Error(paymentData.error || "Payment failed");
+      }
+
+      console.log("✅ Payment intent created:", paymentData);
 
       // Create order data
       const orderData = {
-        id: mockPayment.paymentIntentId,
+        id: paymentData.paymentIntentId,
         basket: basket,
         items: basket.map((item) => ({
           id: item.id,
@@ -92,8 +113,8 @@ function Payment() {
         status: "paid",
         userId: user.uid,
         email: user.email,
-        stripe_payment_intent: mockPayment.paymentIntentId,
-        payment_method: "mock_development",
+        stripe_payment_intent: paymentData.paymentIntentId,
+        backend: "render",
         shipping_address: {
           email: user.email,
           address: "123 React Lane",
@@ -103,15 +124,26 @@ function Payment() {
         },
       };
 
-      console.log("📦 Saving order to Firestore...");
-
       // Save to Firestore
       await setDoc(
-        doc(db, "users", user.uid, "orders", mockPayment.paymentIntentId),
+        doc(db, "users", user.uid, "orders", paymentData.paymentIntentId),
         orderData
       );
 
       console.log("✅ Order saved to Firestore");
+
+      // ✅ FIXED: Confirm order with direct fetch
+      await fetch(`${BACKEND_URL}/api/confirm-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: paymentData.paymentIntentId,
+          paymentIntentId: paymentData.paymentIntentId,
+          amount: total * 100,
+        }),
+      });
 
       // Clear basket and show success
       dispatch({ type: Type.EMPTY_BASKET });
@@ -120,8 +152,8 @@ function Payment() {
       setTimeout(() => {
         navigate("/orders", {
           state: {
-            msg: "🎉 Order placed successfully! (Development Mode)",
-            orderId: mockPayment.paymentIntentId,
+            msg: "🎉 Order placed successfully!",
+            orderId: paymentData.paymentIntentId,
           },
         });
       }, 1500);

@@ -1,11 +1,11 @@
-import React, { useState, useContext, useEffect } from "react";
+
+import React, { useState, useContext } from "react";
 import classes from "./SignUp.module.css";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth } from "../../Utility/firebase";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut,
 } from "firebase/auth";
 import { ClipLoader } from "react-spinners";
 import { DataContext } from "../../Components/DataProvider/DataProvider";
@@ -13,7 +13,7 @@ import { DataContext } from "../../Components/DataProvider/DataProvider";
 function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // ✅ Added for sign-up
   const [error, setError] = useState("");
   const [loading, setLoading] = useState({ signIn: false, signUp: false });
 
@@ -23,32 +23,6 @@ function Auth() {
 
   console.log("Navigation state:", navStateData);
   console.log("Current user:", user);
-
-  // ✅ AUTO-REDIRECT if user is already signed in
-  useEffect(() => {
-    if (user) {
-      console.log("✅ User already signed in, redirecting...");
-      const redirectPath = navStateData?.state?.redirect || "/";
-      navigate(redirectPath, {
-        state: { msg: "Welcome back!" },
-      });
-    }
-  }, [user, navigate, navStateData]);
-
-  // ✅ Sign out function
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      console.log("✅ Signed out successfully");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-      setError("");
-    } catch (error) {
-      console.error("❌ Sign out error:", error);
-      setError("Failed to sign out");
-    }
-  };
 
   // ✅ Form validation
   const validateForm = (isSignUp = false) => {
@@ -126,20 +100,15 @@ function Auth() {
       // ✅ Better error messages
       let errorMessage = err.message;
       if (err.code === "auth/user-not-found") {
-        errorMessage =
-          "No account found with this email. Please sign up first.";
+        errorMessage = "No account found with this email.";
       } else if (err.code === "auth/wrong-password") {
         errorMessage = "Incorrect password.";
       } else if (err.code === "auth/email-already-in-use") {
-        errorMessage =
-          "An account with this email already exists. Please sign in.";
+        errorMessage = "An account with this email already exists.";
       } else if (err.code === "auth/weak-password") {
         errorMessage = "Password should be at least 6 characters.";
       } else if (err.code === "auth/invalid-email") {
         errorMessage = "Invalid email address.";
-      } else if (err.code === "auth/invalid-credential") {
-        errorMessage =
-          "Invalid email or password. Please check your credentials.";
       }
 
       setError(errorMessage);
@@ -162,44 +131,13 @@ function Auth() {
       <div className={classes.login_container}>
         <h1>Sign In</h1>
 
-        {/* ✅ Show current user info if signed in */}
-        {user && (
-          <div
-            style={{
-              background: "#f0f0f0",
-              padding: "10px",
-              borderRadius: "5px",
-              marginBottom: "15px",
-              textAlign: "center",
-            }}
-          >
-            <p style={{ margin: 0, fontWeight: "bold" }}>
-              Currently signed in as: {user.email}
-            </p>
-            <button
-              onClick={handleSignOut}
-              style={{
-                marginTop: "8px",
-                background: "#ff4444",
-                color: "white",
-                border: "none",
-                padding: "5px 10px",
-                borderRadius: "3px",
-                cursor: "pointer",
-              }}
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
-
         {/* ✅ Success message from navigation state */}
         {navStateData?.state?.msg && (
           <small
             style={{
               padding: "5px",
               textAlign: "center",
-              color: "green",
+              color: "green", // ✅ Changed to green for success messages
               fontWeight: "bold",
               display: "block",
               marginBottom: "10px",
@@ -251,7 +189,7 @@ function Auth() {
             onClick={authHandler}
             name="signIn"
             className={classes.login_signInButton}
-            disabled={loading.signIn || loading.signUp || user}
+            disabled={loading.signIn || loading.signUp}
           >
             {loading.signIn ? <ClipLoader color="#fff" size={20} /> : "Sign In"}
           </button>
@@ -267,7 +205,7 @@ function Auth() {
           onClick={authHandler}
           name="signUp"
           className={classes.login_registerButton}
-          disabled={loading.signIn || loading.signUp || user}
+          disabled={loading.signIn || loading.signUp}
         >
           {loading.signUp ? (
             <ClipLoader color="#fff" size={20} />
