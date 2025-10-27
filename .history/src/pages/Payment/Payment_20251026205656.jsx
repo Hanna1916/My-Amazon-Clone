@@ -54,6 +54,7 @@ function Payment() {
       return;
     }
 
+    // ✅ Check if user is authenticated
     if (!user || !user.uid) {
       setCardError("Please sign in to complete payment");
       return;
@@ -63,27 +64,14 @@ function Payment() {
     setCardError(null);
 
     try {
-      console.log("💳 Starting payment process...");
+      console.log("💳 Processing mock payment for user:", user.uid);
+      console.log("💰 Amount:", total);
 
-      // Use Render backend for payment
-      const paymentData = await axiosInstance.post(
-        "/api/create-payment-intent",
-        {
-          amount: total * 100, // Convert to cents
-          userId: user.uid,
-          email: user.email,
-        }
-      );
+      const paymentIntentId = `pi_mock_${Date.now()}`;
 
-      console.log("✅ Payment intent created:", paymentData);
-
-      if (!paymentData.success) {
-        throw new Error(paymentData.error || "Payment failed");
-      }
-
-      // Create order data
+      // Create order data with proper structure
       const orderData = {
-        id: paymentData.paymentIntentId,
+        id: paymentIntentId,
         basket: basket,
         items: basket.map((item) => ({
           id: item.id,
@@ -92,14 +80,14 @@ function Payment() {
           amount: item.amount,
           image: item.image,
         })),
-        amount: total * 100,
+        amount: total,
         total: total,
-        created: serverTimestamp(),
+        created: serverTimestamp(), // Use server timestamp
         status: "paid",
         userId: user.uid,
         email: user.email,
-        stripe_payment_intent: paymentData.paymentIntentId,
-        backend: "render",
+        stripe_payment_intent: paymentIntentId,
+        dev_note: "Mock payment - Development Mode",
         shipping_address: {
           email: user.email,
           address: "123 React Lane",
@@ -109,36 +97,66 @@ function Payment() {
         },
       };
 
-      // Save to Firestore
-      await setDoc(
-        doc(db, "users", user.uid, "orders", paymentData.paymentIntentId),
-        orderData
-      );
+      console.log("📦 Order data:", orderData);
 
-      console.log("✅ Order saved to Firestore");
+      // ✅ Try multiple document paths for better compatibility
+      let saveSuccessful = false;
 
-      // Confirm order with backend
-      await axiosInstance.post("/api/confirm-order", {
-        orderId: paymentData.paymentIntentId,
-        paymentIntentId: paymentData.paymentIntentId,
-        amount: total * 100,
-      });
+      try {
+        // Try saving to users/{uid}/orders first
+        await setDoc(
+          doc(db, "users", user.uid, "orders", paymentIntentId),
+          orderData
+        );
+        saveSuccessful = true;
+        console.log("✅ Order saved to users/{uid}/orders");
+      } catch (error) {
+        console.log(
+          "⚠️ Could not save to users/{uid}/orders, trying orders collection"
+        );
 
-      // Clear basket and show success
-      dispatch({ type: Type.EMPTY_BASKET });
-      setSuccess(true);
-
-      setTimeout(() => {
-        navigate("/orders", {
-          state: {
-            msg: "🎉 Order placed successfully!",
-            orderId: paymentData.paymentIntentId,
+        // Fallback: save to main orders collection
+        await setDoc(doc(db, "orders", paymentIntentId), {
+          ...orderData,
+          user: {
+            uid: user.uid,
+            email: user.email,
           },
         });
-      }, 1500);
+        saveSuccessful = true;
+        console.log("✅ Order saved to orders collection");
+      }
+
+      if (saveSuccessful) {
+        // Clear basket
+        dispatch({ type: Type.EMPTY_BASKET });
+        setSuccess(true);
+
+        // Navigate to orders
+        setTimeout(() => {
+          navigate("/orders", {
+            state: {
+              msg: "🎉 Order placed successfully! (Development Mode)",
+              orderId: paymentIntentId,
+            },
+          });
+        }, 1500);
+      }
     } catch (error) {
       console.error("❌ Payment error:", error);
-      setCardError("Payment failed: " + error.message);
+      console.error("Error details:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+      });
+
+      if (error.code === "permission-denied") {
+        setCardError(
+          "Firestore permission denied. Please check security rules."
+        );
+      } else {
+        setCardError("Payment failed: " + error.message);
+      }
     } finally {
       setProcessing(false);
     }

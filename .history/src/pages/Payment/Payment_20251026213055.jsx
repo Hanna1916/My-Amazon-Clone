@@ -41,108 +41,105 @@ function Payment() {
     e?.error?.message ? setCardError(e?.error?.message) : setCardError("");
   };
 
-  const handlePayment = async (e) => {
-    e.preventDefault();
+const handlePayment = async (e) => {
+  e.preventDefault();
 
-    if (!stripe || !elements) {
-      setCardError("Stripe not loaded yet");
-      return;
+  if (!stripe || !elements) {
+    setCardError("Stripe not loaded yet");
+    return;
+  }
+
+  if (!basket || basket.length === 0) {
+    setCardError("Your basket is empty");
+    return;
+  }
+
+  if (!user || !user.uid) {
+    setCardError("Please sign in to complete payment");
+    return;
+  }
+
+  setProcessing(true);
+  setCardError(null);
+
+  try {
+    console.log("💳 Starting payment process...");
+
+    // Use Render backend for payment
+    const paymentData = await axiosInstance.post("/api/create-payment-intent", {
+      amount: total * 100, // Convert to cents
+      userId: user.uid,
+      email: user.email,
+    });
+
+    console.log("✅ Payment intent created:", paymentData);
+
+    if (!paymentData.success) {
+      throw new Error(paymentData.error || "Payment failed");
     }
 
-    if (!basket || basket.length === 0) {
-      setCardError("Your basket is empty");
-      return;
-    }
-
-    if (!user || !user.uid) {
-      setCardError("Please sign in to complete payment");
-      return;
-    }
-
-    setProcessing(true);
-    setCardError(null);
-
-    try {
-      console.log("💳 Starting payment process...");
-
-      // Use Render backend for payment
-      const paymentData = await axiosInstance.post(
-        "/api/create-payment-intent",
-        {
-          amount: total * 100, // Convert to cents
-          userId: user.uid,
-          email: user.email,
-        }
-      );
-
-      console.log("✅ Payment intent created:", paymentData);
-
-      if (!paymentData.success) {
-        throw new Error(paymentData.error || "Payment failed");
-      }
-
-      // Create order data
-      const orderData = {
-        id: paymentData.paymentIntentId,
-        basket: basket,
-        items: basket.map((item) => ({
-          id: item.id,
-          title: item.title,
-          price: item.price,
-          amount: item.amount,
-          image: item.image,
-        })),
-        amount: total * 100,
-        total: total,
-        created: serverTimestamp(),
-        status: "paid",
-        userId: user.uid,
+    // Create order data
+    const orderData = {
+      id: paymentData.paymentIntentId,
+      basket: basket,
+      items: basket.map((item) => ({
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        amount: item.amount,
+        image: item.image,
+      })),
+      amount: total * 100,
+      total: total,
+      created: serverTimestamp(),
+      status: "paid",
+      userId: user.uid,
+      email: user.email,
+      stripe_payment_intent: paymentData.paymentIntentId,
+      backend: "render",
+      shipping_address: {
         email: user.email,
-        stripe_payment_intent: paymentData.paymentIntentId,
-        backend: "render",
-        shipping_address: {
-          email: user.email,
-          address: "123 React Lane",
-          city: "Frederick",
-          state: "MD",
-          zip: "21701",
+        address: "123 React Lane",
+        city: "Frederick",
+        state: "MD",
+        zip: "21701",
+      },
+    };
+
+    // Save to Firestore
+    await setDoc(
+      doc(db, "users", user.uid, "orders", paymentData.paymentIntentId),
+      orderData
+    );
+
+    console.log("✅ Order saved to Firestore");
+
+    // Confirm order with backend
+    await axiosInstance.post("/api/confirm-order", {
+      orderId: paymentData.paymentIntentId,
+      paymentIntentId: paymentData.paymentIntentId,
+      amount: total * 100,
+    });
+
+    // Clear basket and show success
+    dispatch({ type: Type.EMPTY_BASKET });
+    setSuccess(true);
+
+    setTimeout(() => {
+      navigate("/orders", {
+        state: {
+          msg: "🎉 Order placed successfully!",
+          orderId: paymentData.paymentIntentId,
         },
-      };
-
-      // Save to Firestore
-      await setDoc(
-        doc(db, "users", user.uid, "orders", paymentData.paymentIntentId),
-        orderData
-      );
-
-      console.log("✅ Order saved to Firestore");
-
-      // Confirm order with backend
-      await axiosInstance.post("/api/confirm-order", {
-        orderId: paymentData.paymentIntentId,
-        paymentIntentId: paymentData.paymentIntentId,
-        amount: total * 100,
       });
-
-      // Clear basket and show success
-      dispatch({ type: Type.EMPTY_BASKET });
-      setSuccess(true);
-
-      setTimeout(() => {
-        navigate("/orders", {
-          state: {
-            msg: "🎉 Order placed successfully!",
-            orderId: paymentData.paymentIntentId,
-          },
-        });
-      }, 1500);
-    } catch (error) {
-      console.error("❌ Payment error:", error);
-      setCardError("Payment failed: " + error.message);
-    } finally {
-      setProcessing(false);
-    }
-  };
+    }, 1500);
+  } catch (error) {
+    console.error("❌ Payment error:", error);
+    setCardError("Payment failed: " + error.message);
+  } finally {
+    setProcessing(false);
+  }
+};
 
   // ✅ Early return if no basket
   if (!basket || basket.length === 0) {
