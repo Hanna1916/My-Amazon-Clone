@@ -17,8 +17,7 @@ app.use(express.json());
 
 // Initialize Stripe
 const stripe = new Stripe(
-  process.env.STRIPE_KEY ||
-    "sk_test_51SBQKEFmGJBKU2O1JsVXKh0gCcLtcG3QN5HFfqXWnW9p4XfKFBUVKbsk4v0fIl1qsPt1cuCx8tjJP4mmQlnBKAwJ00zjxDypQ6"
+  process.env.STRIPE_SECRET_KEY
 );
 
 // Health check route
